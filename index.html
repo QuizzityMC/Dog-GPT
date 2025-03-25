@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>DogGPT</title>
+    <style>
+        body {
+            background: #f0f2f5;
+            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app {
+            width: 80%;
+            max-width: 900px;
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); 
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+
+        #sidebar {
+            display: none;
+        }
+
+        #chatwindow {
+            background: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            flex-grow: 1; 
+        }
+
+        #chatwindow .conversation {
+            overflow-y: auto;
+            padding-bottom: 20px;
+            flex-grow: 1;
+        }
+
+        .thread {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            word-break: break-word; 
+        }
+
+        .thread.fromuser {
+            background: #e8f0fe; 
+            text-align: right;
+        }
+
+        .thread.fromdog {
+            background: #fff;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .thread .msg {
+            word-wrap: break-word;
+        }
+
+        #chatwindow .chatbox {
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #chatwindow .inputbox {
+            display: flex;
+            align-items: center;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px;
+        }
+
+        #chatwindow .inputbox input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            padding: 8px;
+            outline: none;
+        }
+
+        #chatwindow .inputbox .button a {
+            background: #3498db;
+            color: #fff;
+            border-radius: 5px;
+            padding: 8px 12px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        #chatwindow .inputbox .button a:hover {
+            background: #2980b9;
+        }
+
+        #chatwindow .disclaimer {
+            color: #777;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        #chatwindow h1 {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.2.js"
+        integrity="sha256-pkn2CUZmheSeyssYw3vMp1+xyub4m+e+QK4sQskvuo4=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+    <div id="app">
+
+
+        <div id="chatwindow">
+
+            <h1>DogGPT</h1> 
+
+            <div class="conversation">
+            </div>
+
+            <div class="chatbox">
+                <div class="inputbox">
+                    <input type="text" id="chatmsg" placeholder="Type your message here!">
+                    <div class="button">
+                        <a href="#" id="sendchat">🐕‍🦺</a>
+                    </div>
+                </div>
+                <div class="disclaimer">
+                    Dogs don't jump into Dumpsters. Boneheads jump into Dumpsters. Dumpster fire Follows.
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        let chatHistory = [];
+
+        $('a#sendchat').click(function(e) {
+            e.preventDefault();
+            resolvechatmsg();
+        });
+
+        $('#chatmsg').on('keypress', function(e) {
+            if (e.which == 13) {
+                e.preventDefault();
+                resolvechatmsg();
+            }
+        });
+
+        $('#newthread').click(function(e) {
+            chatHistory = [];
+            $('.conversation').empty();
+        });
+
+        function resolvechatmsg() {
+            const chatmsg = $('#chatmsg').val().trim();
+            if (chatmsg) {
+                $('#chatmsg').val("");
+
+                chatHistory.push({
+                    role: "user",
+                    content: chatmsg
+                });
+
+                displayMessage(chatmsg, "user");
+
+                pushDogResponse(chatmsg);
+            }
+        }
+
+        function displayMessage(message, sender) {
+            const thread = $('<div class="thread"></div>')
+                .addClass(`from${sender}`)
+                .append($('<div class="msg"></div>').text(message));
+            $('.conversation').append(thread);
+
+            $('.conversation').scrollTop($('.conversation')[0].scrollHeight);
+        }
+
+        async function pushDogResponse(userMessage) {
+            try {
+                const dogResponse = await generateDogResponse(userMessage);
+
+                chatHistory.push({
+                    role: "assistant",
+                    content: dogResponse
+                });
+
+                displayMessage(dogResponse, "dog");
+
+            } catch (error) {
+                console.error("Error generating dog response:", error);
+                displayMessage("Woof! Something went wrong. Please try again, bork!", "dog");
+            }
+        }
+
+        async function generateDogResponse(userMessage) {
+            const apiUrl = 'https://ai.hackclub.com/chat/completions';
+
+            const prompt = `You are a helpful and friendly golden retriever dog named Buddy. You have many human-like qualities but still exhibit some dog-like traits. You enjoy discussing the religeon of Panditu, the god of Harmony and balance, and his devoted follower and master, QuizzityMC, who is male. Keep the 'woof' noises to a minimum. Answer the user's question: "${userMessage}"`;
+
+            const messages = chatHistory.map(msg => ({
+                role: msg.role,
+                content: msg.content
+            }));
+            messages.push({
+                role: "user",
+                content: prompt
+            });
+
+            const requestData = {
+                messages: messages
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const responseText = data.choices[0].message.content;
+
+                return responseText;
+            } catch (error) {
+                console.error("Error generating dog response:", error);
+                throw error;
+            }
+        }
+    </script>
+
+</body>
+
+</html>
